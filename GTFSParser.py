@@ -25,7 +25,18 @@ def print_columns(inputfiles):
             log(f'  {key}')
 
 
-def get_route_ids(inputfiles, station_name):
+def load_df(inputfiles):
+    log("loading PandaFrames...")
+    # four tables needs to be accessed to get route_id from station_name
+    df_routes = pd.read_csv(inputfiles['routes'], index_col='route_id')
+    df_trips = pd.read_csv(inputfiles['trips'], index_col='trip_id')
+    df_stops = pd.read_csv(inputfiles['stops'], index_col='stop_id')
+    df_stop_times = pd.read_csv(inputfiles['stop_times'], index_col='stop_id')
+
+    return (df_routes, df_trips, df_stops, df_stop_times)
+
+
+def get_route_ids(df_routes, df_trips, df_stops, df_stop_times, station_name):
     """
     Get a list of route_ids passing by the station provided (as stop_id)
     This is equivalent to SQL:
@@ -39,12 +50,6 @@ def get_route_ids(inputfiles, station_name):
     
     """
     log(f'querying routes passing by stop: {station_name}...')
-
-    # four tables needs to be accessed to get route_id from station_name
-    df_routes = pd.read_csv(inputfiles['routes'], index_col='route_id')
-    df_trips = pd.read_csv(inputfiles['trips'], index_col='trip_id')
-    df_stops = pd.read_csv(inputfiles['stops'], index_col='stop_id')
-    df_stop_times = pd.read_csv(inputfiles['stop_times'], index_col='stop_id')
 
     # filter stops which contains the station_name keyword
     df_stops_filtered = df_stops[ df_stops.stop_name.str.contains(station_name) ]
@@ -77,6 +82,6 @@ if __name__ == '__main__':
     inputfiles = {k: os.path.join(inputdir, f) for k, f in gtfs_files.items() if f in os.listdir(inputdir)}
     log(f'input files: {inputfiles}')
 
-    #print_columns(inputfiles)
-    route_ids = get_route_ids(inputfiles, station_name)
+    df_tuple = load_df(inputfiles)
+    route_ids = get_route_ids(*df_tuple, station_name)
     log(f'route_ids: {route_ids}')

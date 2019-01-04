@@ -36,6 +36,18 @@ def load_df(inputfiles):
     return (df_routes, df_trips, df_stops, df_stop_times)
 
 
+def load_df_header(inputfiles):
+    from csvparser_cffi import lib
+    csvparser = lib.CsvParser_new(inputfiles['routes'].encode('ascii'),
+                                  ",".encode('ascii'),
+                                  1)
+    header = lib.CsvParser_getHeader(csvparser)
+    log(f'header has {header.numOfFields_} fields')
+
+    # TODO return header row as python string
+
+    return header
+
 def get_route_ids(df_routes, df_trips, df_stops, df_stop_times, station_name):
     """
     Get a list of route_ids passing by the station provided (as stop_id)
@@ -70,11 +82,14 @@ def get_route_ids(df_routes, df_trips, df_stops, df_stop_times, station_name):
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        log(f'{sys.argv[0]} <input-dir> <station-name>')
+        log(f'{sys.argv[0]} <input-dir> <station-name> [csv-cffi]')
         sys.exit(1)
 
     inputdir = os.path.expanduser(sys.argv[1])
     station_name = str(sys.argv[2])
+
+    # TODO use argparse instead
+    cffi = True if len(sys.argv) > 3 else False
 
     # feed only existing files
     gtfs_files = {t: '%s.txt' % t for t in gtfs_tables + gtfs_tables_opt}
@@ -82,6 +97,10 @@ if __name__ == '__main__':
     inputfiles = {k: os.path.join(inputdir, f) for k, f in gtfs_files.items() if f in os.listdir(inputdir)}
     log(f'input files: {inputfiles}')
 
+    if cffi:
+        df_tuple_header = load_df_header(inputfiles)
+
     df_tuple = load_df(inputfiles)
+
     route_ids = get_route_ids(*df_tuple, station_name)
     log(f'route_ids: {route_ids}')

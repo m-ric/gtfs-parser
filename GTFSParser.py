@@ -1,31 +1,23 @@
 #!/usr/bin/env python3
 
 import os
-import pandas as pd
 import sys
 
+import pandas as pd
 
 gtfs_tables = ['agency', 'routes', 'trips', 'stop_times', 'stops', 'calendar']
-gtfs_tables_opt = ['calendar_dates', 'fare_attributes', 'fare_rules', 'shapes', 'frequencies', 'feed_info']
+gtfs_tables_opt = ['calendar_dates', 'fare_attributes', 'fare_rules', 'shapes', 'frequencies',
+                   'feed_info']
+
 
 # TODO replace dummy log with logging
 def log(*args, **kwargs):
     print(*args, **kwargs)
 
 
-def print_columns(inputfiles):
-    for inputkey, inputfile in inputfiles.items():
-        log(f'parsing {inputfile}...')
-        df = pd.read_csv(inputfile)
-
-        #if {'route_id', 'route_long_name'} <= set(df):
-
-        log('Columns:')
-        for key in df.keys():
-            log(f'  {key}')
-
-
 def load_df(inputfiles):
+    """ loads GTFS CSV files and returns associated panda frames """
+
     log("loading PandaFrames...")
     # four tables needs to be accessed to get route_id from station_name
     df_routes = pd.read_csv(inputfiles['routes'], index_col='route_id')
@@ -48,6 +40,7 @@ def load_df_header(inputfiles):
 
     return header
 
+
 def get_route_ids(df_routes, df_trips, df_stops, df_stop_times, station_name):
     """
     Get a list of route_ids passing by the station provided (as stop_id)
@@ -59,12 +52,12 @@ def get_route_ids(df_routes, df_trips, df_stops, df_stop_times, station_name):
       INNER JOIN stop_times ON stop_times.trip_id = trips.trip_id
       INNER JOIN stops ON stops.stop_id = stop_times.stop_id
       WHERE stops.stop_name LIKE '<station_name>%';
-    
+
     """
     log(f'querying routes passing by stop: {station_name}...')
 
     # filter stops which contains the station_name keyword
-    df_stops_filtered = df_stops[ df_stops.stop_name.str.contains(station_name) ]
+    df_stops_filtered = df_stops[df_stops.stop_name.str.contains(station_name)]
     log(f'df_stops_filt: {len(df_stops_filtered)}')
 
     # join stops with stop_times
@@ -80,7 +73,9 @@ def get_route_ids(df_routes, df_trips, df_stops, df_stop_times, station_name):
     return df_routes_join.route_id.unique()
 
 
-if __name__ == '__main__':
+def main():
+    """ parses arguments and get route ID passing by station given as argument """
+
     if len(sys.argv) < 3:
         log(f'{sys.argv[0]} <input-dir> <station-name> [csv-cffi]')
         sys.exit(1)
@@ -99,8 +94,13 @@ if __name__ == '__main__':
 
     if cffi:
         df_tuple_header = load_df_header(inputfiles)
+        log(df_tuple_header)
 
     df_tuple = load_df(inputfiles)
 
     route_ids = get_route_ids(*df_tuple, station_name)
     log(f'route_ids: {route_ids}')
+
+
+if __name__ == '__main__':
+    main()
